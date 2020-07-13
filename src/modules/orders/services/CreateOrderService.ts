@@ -31,20 +31,41 @@ class CreateOrderService {
   ) {}
 
   public async execute({ customer_id, products }: IRequest): Promise<Order> {
-    const productsOnOrder = await this.productsRepository.findAllById(products);
+    if (!products || products.length === 0) throw new AppError('No products');
 
-    if (!productsOnOrder) {
-      throw new AppError('No Products on Order');
+    const productsInDB = await this.productsRepository.findAllById(products);
+
+    if (productsInDB.length !== products.length) {
+      throw new AppError('Product not found');
     }
+
     const customer = await this.customersRepository.findById(customer_id);
 
-    if (!customer) {
-      throw new AppError('Invalid Customer ID');
-    }
+    if (!customer || !customer_id) throw new AppError('Invalid Customer ID');
+
+    const updatedProducts = productsInDB.map(product => {
+      const cProduct = products.find(prod => prod.id === product.id);
+
+      if (!cProduct) throw new AppError('Product not found');
+
+      if (cProduct.quantity > product.quantity)
+        throw new AppError('Quantidade insuficiente em estoque');
+
+      if (cProduct.quantity < 1 || !cProduct.quantity)
+        throw new AppError('Quantidade insuficiente');
+
+      return {
+        product_id: product.id,
+        price: product.price,
+        quantity: cProduct.quantity,
+      };
+    });
+
+    await this.productsRepository.updateQuantity(products);
 
     const order = await this.ordersRepository.create({
       customer,
-      products: productsOnOrder,
+      products: updatedProducts,
     });
 
     return order;

@@ -5,7 +5,6 @@ import {
   UpdateDateColumn,
   JoinColumn,
   OneToMany,
-  Column,
   ManyToOne,
 } from 'typeorm';
 
@@ -17,14 +16,17 @@ class Order {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => Customer)
+  @ManyToOne(() => Customer, {
+    cascade: true,
+    eager: true,
+  })
   @JoinColumn({ name: 'customer_id' })
   customer: Customer;
 
-  @Column()
-  customer_id: string;
-
-  @OneToMany(() => OrdersProducts, order_products => order_products.order)
+  @OneToMany(() => OrdersProducts, ordersproducts => ordersproducts.order, {
+    cascade: ['insert'],
+    eager: true,
+  })
   order_products: OrdersProducts[];
 
   @CreateDateColumn()
